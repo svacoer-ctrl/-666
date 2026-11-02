@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>接球大挑戰</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% 0,#203b62,#091321 65%);color:#f4f7ff;font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;min-height:100vh;display:grid;place-items:center;padding:18px}.app{width:min(760px,100%)}header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}h1{font-size:clamp(24px,5vw,36px);margin:0}.sub{color:#a9bdd8;font-size:13px}.stats{display:flex;gap:8px}.stat{background:#ffffff12;border:1px solid #ffffff20;border-radius:14px;padding:8px 13px;text-align:center;min-width:74px}.stat b{display:block;font-size:20px;color:#7ce5ff}canvas{width:100%;aspect-ratio:4/3;display:block;border:1px solid #ffffff30;border-radius:20px;background:linear-gradient(#0b1b31,#102a45);touch-action:none;box-shadow:0 18px 60px #0008}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}.btn{border:0;border-radius:12px;padding:11px 18px;font-weight:700;background:#7ce5ff;color:#092033;cursor:pointer}.btn.secondary{background:#ffffff18;color:#eaf4ff;border:1px solid #ffffff30}.hint{color:#b5c6dc;font-size:13px;line-height:1.6;margin-top:12px}.overlay{position:relative;margin-top:-210px;height:0;display:flex;justify-content:center;pointer-events:none}.message{background:#071526eF;border:1px solid #ffffff40;padding:18px 24px;border-radius:16px;text-align:center;pointer-events:auto;box-shadow:0 10px 40px #0008}.message strong{font-size:22px}.message p{margin:6px 0 0;color:#c4d6eb}
+@media(max-width:520px){.stat{min-width:60px;padding:7px}.stats{gap:5px}.overlay{margin-top:-175px}}
+</style></head><body><main class="app"><header><div><h1>🧺 接球大挑戰</h1><div class="sub">接住落下的能量球，挑戰最高分！</div></div><div class="stats"><div class="stat">分數<b id="score">0</b></div><div class="stat">生命<b id="lives">3</b></div><div class="stat">等級<b id="level">1</b></div></div></header>
+<canvas id="game" width="800" height="600" aria-label="接球遊戲畫布"></canvas><div class="overlay" id="overlay"><div class="message"><strong>準備好了嗎？</strong><p>移動接球盤接住落下的球</p><button class="btn" id="start">開始遊戲</button></div></div>
+<div class="controls"><button class="btn" id="restart">重新開始</button><button class="btn secondary" id="pause">暫停</button><span class="sub">電腦：滑鼠移動　手機：手指拖曳</span></div>
+<div class="hint">遊戲原理：用變數記錄球的位置、速度與分數；每一幀更新座標（x += speedX、y += speedY）並重新繪製。球的位置與顏色使用隨機數，接球盤則跟隨滑鼠或觸控位置。</div></main>
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const scoreEl=document.getElementById('score'),livesEl=document.getElementById('lives'),levelEl=document.getElementById('level'),overlay=document.getElementById('overlay');
+const W=canvas.width,H=canvas.height;
+let score=0,lives=3,level=1,paddle={x:W/2-70,y:H-55,w:140,h:18},balls=[],running=false,paused=false,frame=0,lastSpawn=0;
+const colors=['#70e1ff','#ffd166','#b8f28b','#ff8fab','#c6a0ff'];
+function rand(n){return Math.random()*n}
+function makeBall(){balls.push({x:30+rand(W-60),y:-24,r:13+rand(5),speed:2.4+level*.45+rand(1.4),color:colors[Math.floor(rand(colors.length))],spin:rand(6.28)})}
+function updateStats(){scoreEl.textContent=score;livesEl.textContent=lives;level=Math.floor(score/10)+1;levelEl.textContent=level}
+function reset(){score=0;lives=3;level=1;balls=[];frame=0;lastSpawn=0;paddle.x=W/2-paddle.w/2;makeBall();updateStats();running=false;paused=false;document.getElementById('pause').textContent='暫停';overlay.style.display='flex';overlay.querySelector('strong').textContent='準備好了嗎？';overlay.querySelector('p').textContent='移動接球盤接住落下的球';overlay.querySelector('button').style.display='inline-block'}
+function move(clientX){const r=canvas.getBoundingClientRect();paddle.x=(clientX-r.left)/r.width*W-paddle.w/2;paddle.x=Math.max(0,Math.min(W-paddle.w,paddle.x))}
+canvas.addEventListener('pointermove',e=>move(e.clientX));canvas.addEventListener('pointerdown',e=>{move(e.clientX);if(!running&&!paused&&lives>0)start()});
+function start(){if(lives<=0)reset();running=true;paused=false;overlay.style.display='none';document.getElementById('pause').textContent='暫停'}
+document.getElementById('start').onclick=start;document.getElementById('restart').onclick=reset;
+document.getElementById('pause').onclick=()=>{if(!running&&!paused)return;if(paused){paused=false;running=true;document.getElementById('pause').textContent='暫停';overlay.style.display='none'}else{paused=true;running=false;document.getElementById('pause').textContent='繼續';overlay.style.display='flex';overlay.querySelector('strong').textContent='已暫停';overlay.querySelector('p').textContent='準備好後按「繼續」';overlay.querySelector('button').textContent='繼續';overlay.querySelector('button').style.display='inline-block';overlay.querySelector('button').onclick=()=>{overlay.querySelector('button').onclick=start;start()}}};
+function drawBackground(){ctx.clearRect(0,0,W,H);ctx.fillStyle='#ffffff';for(let i=0;i<45;i++){let x=(i*173)%W,y=(i*97+frame*.18)%H;ctx.globalAlpha=.18+(i%4)*.1;ctx.fillRect(x,y,2,2)}ctx.globalAlpha=1}
+function draw(){drawBackground();ctx.fillStyle='#ffffff12';ctx.fillRect(0,H-35,W,2);
+balls.forEach(b=>{ctx.save();ctx.shadowBlur=22;ctx.shadowColor=b.color;ctx.fillStyle=b.color;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();ctx.restore();ctx.fillStyle='#ffffffaa';ctx.beginPath();ctx.arc(b.x-b.r*.3,b.y-b.r*.35,b.r*.22,0,Math.PI*2);ctx.fill()});
+ctx.save();ctx.shadowBlur=22;ctx.shadowColor='#65e5ff';ctx.fillStyle='#65e5ff';ctx.beginPath();ctx.roundRect(paddle.x,paddle.y,paddle.w,paddle.h,9);ctx.fill();ctx.fillStyle='#d9fbff';ctx.fillRect(paddle.x+18,paddle.y+4,paddle.w-36,3);ctx.restore();
+ctx.fillStyle='#d9eaff';ctx.font='16px system-ui';ctx.fillText('← 接住能量球 →',W/2-68,H-15)}
+function step(){if(running){frame++;if(frame-lastSpawn>Math.max(25,75-level*4)){makeBall();lastSpawn=frame}
+for(let i=balls.length-1;i>=0;i--){let b=balls[i];b.y+=b.speed;b.spin+=.04;
+if(b.y+b.r>=paddle.y&&b.y-b.r<=paddle.y+paddle.h&&b.x>=paddle.x&&b.x<=paddle.x+paddle.w&&b.speed>0){balls.splice(i,1);score++;updateStats();continue}
+if(b.y-b.r>H){balls.splice(i,1);lives--;updateStats();if(lives<=0){running=false;overlay.style.display='flex';overlay.querySelector('strong').textContent='遊戲結束！';overlay.querySelector('p').textContent='你的分數是 '+score+' 分，再挑戰一次吧！';overlay.querySelector('button').textContent='再玩一次';overlay.querySelector('button').onclick=()=>{overlay.querySelector('button').onclick=start;reset();start()}}}}
+}draw();requestAnimationFrame(step)}
+reset();step();
+</script></body></html>
